@@ -69,6 +69,7 @@ div[data-cel-widget^="multi-brand-video-mobile_DetailPage_"]
 div[data-cel-widget^="multi-card-creative-desktop_loom-desktop-top-slot_"]
 div[data-cel-widget^="sb-"]
 div[data-cel-widget^="sp-mobile-thematic-bundle"]
+div[data-csa-c-content-id="sims-substitutes"]:has(div[class^="adFeedbackMainComponent_"])
 div[data-csa-c-painter="single-creative-card"]:has([data-ad-feedback-label-id])
 div[data-csa-c-painter="single-video-card"]:has([data-ad-feedback-label-id])
 div[data-csa-c-painter="sp-cart-mobile-carousel-cards"]
