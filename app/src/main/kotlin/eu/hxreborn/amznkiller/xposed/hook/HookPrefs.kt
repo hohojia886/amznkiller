@@ -8,6 +8,7 @@ import eu.hxreborn.amznkiller.prefs.ForceDarkMode
 import eu.hxreborn.amznkiller.prefs.Prefs
 import eu.hxreborn.amznkiller.selectors.SelectorSanitizer
 import eu.hxreborn.amznkiller.util.Logger
+import eu.hxreborn.amznkiller.xposed.injector.CssInjector
 import io.github.libxposed.api.XposedInterface
 
 @Volatile internal var selectors: List<String> = emptyList()
@@ -41,6 +42,7 @@ internal val forceDarkWebview: Boolean
 
 internal fun setFallbackSelectors(fallback: List<String>) {
     selectors = fallback
+    CssInjector.updateCache(fallback)
 }
 
 internal fun installHookPrefs(xposed: XposedInterface) {
@@ -63,7 +65,9 @@ internal fun installHookPrefs(xposed: XposedInterface) {
 internal fun loadHookPrefs(prefs: SharedPreferences) {
     runCatching {
         val raw = Prefs.CACHED_SELECTORS.read(prefs)
-        selectors = SelectorSanitizer.sanitize(raw.lineSequence())
+        val sanitized = SelectorSanitizer.sanitize(raw.lineSequence())
+        selectors = sanitized
+        CssInjector.updateCache(sanitized)
         debugLogs = Prefs.DEBUG_LOGS.read(prefs)
         injectionEnabled = Prefs.INJECTION_ENABLED.read(prefs)
         webviewDebugging = Prefs.WEBVIEW_DEBUGGING.read(prefs)

@@ -122,12 +122,26 @@
 
     var hit = tryInsert();
     if (!hit) {
+      var obsTarget = document.querySelector('#centerCol') ||
+                        document.querySelector('#desktop_buybox') ||
+                        document.querySelector('#dp-container') ||
+                        document.body || document.documentElement;
+      var timer = null;
       var obs = new MutationObserver(function (_, o) {
-        var h = tryInsert();
-        if (h) o.disconnect();
+        if (timer) return;
+        timer = setTimeout(function () {
+          timer = null;
+          var h = tryInsert();
+          if (h) {
+            o.disconnect();
+          }
+        }, 100);
       });
-      obs.observe(document.body || document.documentElement, { childList: true, subtree: true });
-      setTimeout(function () { obs.disconnect(); }, 10000);
+      obs.observe(obsTarget, { childList: true, subtree: true });
+      setTimeout(function () {
+        if (timer) clearTimeout(timer);
+        obs.disconnect();
+      }, 10000);
     }
     // Re-inject on SPA variant navigation
     if (!window.AmznKiller._chartHooked) {

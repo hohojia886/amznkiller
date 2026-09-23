@@ -43,7 +43,7 @@ object ForceDarkHook {
 
     private const val PROBE_DELAY_MS = 600L
     private const val EDGE_INSET = 8
-    private const val SCAN_STEP = 2
+    private const val SCAN_STEP = 4
     private const val MID_LUMINANCE = 128
     private const val LEGIBLE_BRIGHT_RATIO = 0.05f
 
@@ -371,7 +371,11 @@ object ForceDarkHook {
             ) {
                 onSkipsBar()
             } else {
-                lightenUnreadableIcons(bar, shot, origin)
+                try {
+                    lightenUnreadableIcons(bar, shot, origin)
+                } finally {
+                    shot.recycle()
+                }
             }
         }, handler)
     }

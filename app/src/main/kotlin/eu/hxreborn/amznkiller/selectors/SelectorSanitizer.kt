@@ -10,9 +10,14 @@ object SelectorSanitizer {
         if ("##" in s || "#@#" in s) return false
         if ("{" in s || "}" in s) return false
         if ("/*" in s || "*/" in s) return false
-        if ("\u0000" in s) return false
-        if ("\r" in s || "\n" in s) return false
-        if (s.startsWith(">") || s.startsWith("+") || s.startsWith("~")) return false
+        if ("\u0000" in s || "\r" in s || "\n" in s) return false
+        if (s.contains("</style", ignoreCase = true) ||
+            s.contains("<script", ignoreCase = true)
+        ) {
+            return false
+        }
+        if (s.any { it < ' ' && it != '\t' }) return false
+        if (s.startsWith("+") || s.startsWith("~")) return false
         return true
     }
 }

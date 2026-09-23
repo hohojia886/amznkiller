@@ -20,12 +20,33 @@ object CssInjector {
     )
 
     private val lastInjectionByWebView = WeakHashMap<WebView, InjectionKey>()
-    private var cachedCss: String? = null
-    private var cachedHash: Int = 0
+
+    @Volatile private var cachedCss: String = ""
+
+    @Volatile private var cachedHash: Int = 0
+
+    @Volatile private var cachedRuleCount: Int = 0
     private var lastValidatedHash: Int = 0
 
     fun onNavigation(webView: WebView) {
         lastInjectionByWebView.remove(webView)
+    }
+
+    fun updateCache(selectors: List<String>) {
+        val hash = selectors.hashCode()
+        if (cachedHash == hash && cachedCss.isNotEmpty()) return
+        val builder = StringBuilder(selectors.size * 32)
+        for (selector in selectors) {
+            builder.append(selector).append("{display:none!important;}")
+        }
+        builder.append(
+            "#amznkiller-charts,#amznkiller-charts *" +
+                "{display:block!important;visibility:visible!important;" +
+                "opacity:1!important;}",
+        )
+        cachedCss = builder.toString()
+        cachedHash = hash
+        cachedRuleCount = selectors.size
     }
 
     fun inject(
@@ -42,7 +63,10 @@ object CssInjector {
             return
         }
 
-        val hash = selectors.hashCode()
+        updateCache(selectors)
+        val hash = cachedHash
+        val css = cachedCss
+
         lastInjectionByWebView[webView]?.let { last ->
             if (last.url == url && last.selectorsHash == hash) {
                 Logger.debug { "css skip reason=already-injected" }
@@ -50,7 +74,6 @@ object CssInjector {
             }
         }
 
-        val css = getOrBuildCss(selectors, hash)
         val shouldValidate = BuildConfig.DEBUG && lastValidatedHash != hash
         if (shouldValidate) lastValidatedHash = hash
 
@@ -59,7 +82,7 @@ object CssInjector {
                 put("css", css)
                 put("hash", hash)
                 put("validate", shouldValidate)
-                put("expectedRules", selectors.size + WHITELIST_RULE_COUNT)
+                put("expectedRules", cachedRuleCount + WHITELIST_RULE_COUNT)
             }
         val script = "${
             ScriptRepository.get(
@@ -67,29 +90,13 @@ object CssInjector {
             )
         }\nwindow.AmznKiller.blockAds($args);"
         lastInjectionByWebView[webView] = InjectionKey(url, hash)
-        Logger.debug { "css inject rules=${selectors.size}" }
+        Logger.debug { "css inject rules=$cachedRuleCount" }
 
         WebViewJsExecutor.evaluate(webView, script, "CssInjector") { result ->
             if (result == null || result == "null" || result.contains("\"ok\":true")) {
                 return@evaluate
             }
             Logger.debug { "css validate result=$result" }
-        }
-    }
-
-    private fun getOrBuildCss(
-        selectors: List<String>,
-        hash: Int,
-    ): String {
-        if (cachedHash == hash) cachedCss?.let { return it }
-        val hideRules = selectors.joinToString("") { "$it{display:none!important;}" }
-        val whitelist =
-            "#amznkiller-charts,#amznkiller-charts *" +
-                "{display:block!important;visibility:visible!important;" +
-                "opacity:1!important;}"
-        return (hideRules + whitelist).also {
-            cachedCss = it
-            cachedHash = hash
         }
     }
 }

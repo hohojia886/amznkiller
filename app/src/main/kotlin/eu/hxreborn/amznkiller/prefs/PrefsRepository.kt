@@ -7,6 +7,7 @@ import eu.hxreborn.amznkiller.ui.theme.DarkThemeConfig
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 
 class PrefsRepository(
     private val local: SharedPreferences,
@@ -48,7 +49,7 @@ class PrefsRepository(
             val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ -> emit() }
             local.registerOnSharedPreferenceChangeListener(listener)
             awaitClose { local.unregisterOnSharedPreferenceChangeListener(listener) }
-        }
+        }.distinctUntilChanged()
 
     val currentSelectors: List<String>
         get() = Prefs.parseSelectors(Prefs.CACHED_SELECTORS.read(local))
@@ -71,13 +72,13 @@ class PrefsRepository(
         value: T,
     ) {
         local.edit { pref.write(this, value) }
-        runCatching { remoteProvider()?.edit(commit = true) { pref.write(this, value) } }
+        runCatching { remoteProvider()?.edit { pref.write(this, value) } }
     }
 
     fun syncToRemote() {
         val remote = remoteProvider() ?: return
         runCatching {
-            remote.edit(commit = true) {
+            remote.edit {
                 Prefs.all.forEach { it.copyIfChanged(local, remote, this) }
             }
         }
